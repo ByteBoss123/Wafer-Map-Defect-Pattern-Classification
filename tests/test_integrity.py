@@ -53,3 +53,20 @@ def test_metrics_consistent():
     assert lo <= M["M1_cnn"]["macro_f1"] <= hi
     best = max(e["val_macro_f1"] for e in M["M1_cnn"]["training_log"])
     assert best == M["M1_cnn"]["best_val_macro_f1"]
+
+
+def test_saved_weights_reproduce_test_score():
+    """Anyone can re-score the published weights on the test split and get the reported numbers."""
+    from sklearn.metrics import f1_score
+    from model import load_model, predict_proba
+    X, Y, _ = load()
+    te = split(X, Y)[0]["test"]
+    P = (predict_proba(X[te], load_model()) >= 0.5).astype(int)
+    assert round(float(f1_score(Y[te], P, average="macro", zero_division=0)), 4) == M["M1_cnn"]["macro_f1"]
+    assert round(float((P == Y[te]).all(axis=1).mean()), 4) == M["M1_cnn"]["exact_match"]
+
+
+def test_predict_single_map_shape():
+    from model import predict_proba
+    X, _, _ = load()
+    assert predict_proba(X[0]).shape == (1, 8)
